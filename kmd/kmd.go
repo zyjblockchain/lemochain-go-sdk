@@ -144,3 +144,72 @@ func (c *Client) SendTransferAssetTx(hexPriv, from, to, message string, assetId,
 	// 发送交易到glemo
 	return SendTx(signedTx, c.chainUrl)
 }
+
+// SendModifyMultiTx
+/*
+signers: [{
+                    address: 'Lemo83HKZK68JQZDRGS5PWT2ZBSKR5CRADCSJB9B',
+                    weight: 50,
+                }, {
+                    address: 'Lemo83W3DBN8QASNAR2D5386QSNGC8DAN8TSRK53',
+                    weight: 30,
+                }, {
+                    address: 'Lemo83P3377KJHWD3DGQ4T82QDB8QBG69456BQZ8',
+                    weight: 50,
+                }],
+*/
+type SignerAddr struct {
+	Address string
+	Weight  uint8
+}
+
+func (c *Client) SendModifyMultiTx(hexPriv, from, to, message string, signers []SignerAddr) (interface{}, error) {
+	ss := make(types.Signers, 0)
+	for _, signer := range signers {
+		addr, _ := common.StringToAddress(signer.Address)
+		s := types.SignAccount{
+			Address: addr,
+			Weight:  signer.Weight,
+		}
+		ss = append(ss, s)
+	}
+	signedTx, err := transaction.ModifyMultiTx(hexPriv, from, to, message, ss)
+	if err != nil {
+		return nil, err
+	}
+	// 发送交易到glemo
+	return SendTx(signedTx, c.chainUrl)
+}
+
+// GetBalance
+func (c *Client) GetBalance(address string) (string, error) {
+	return getBalance(address, c.chainUrl)
+}
+
+func (c *Client) GetAccount(address string) (map[string]interface{}, error) {
+	return getAccount(address, c.chainUrl)
+}
+
+func (c *Client) IsCandidateAcc(address string) (bool, error) {
+	mapAcc, err := getAccount(address, c.chainUrl)
+	if err != nil {
+		return false, err
+	}
+	if val, ok := mapAcc["candidate"]; ok {
+		if newVal, ok := val.(map[string]interface{}); ok {
+			for key, v := range newVal["profile"].(map[string]interface{}) {
+				if key == "isCandidate" {
+					if v.(string) == "true" {
+						return true, nil
+					} else {
+						return false, nil
+					}
+
+				}
+			}
+		}
+		return false, nil
+	} else {
+		return false, nil
+	}
+}

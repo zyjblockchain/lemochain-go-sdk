@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/LemoFoundationLtd/lemochain-core/chain/params"
+	"github.com/LemoFoundationLtd/lemochain-core/chain/transaction"
 	"github.com/LemoFoundationLtd/lemochain-core/chain/types"
 	"github.com/LemoFoundationLtd/lemochain-core/common"
 	"github.com/LemoFoundationLtd/lemochain-core/common/crypto"
@@ -228,6 +229,35 @@ func TransferAssetTx(hexPriv, from, to, message string, tradingAsset *types.Trad
 		return nil, err
 	}
 	rawTx := types.NewTransaction(sender, recipient, nil, gasLimit, gasPrice, data, params.TransferAssetTx, chainID, uint64(time.Now().Unix()+20*60), "", message)
+	signer := types.MakeSigner()
+	return signer.SignTx(rawTx, private)
+}
+
+// 设置多签账户交易
+func ModifyMultiTx(hexPriv, from, to, message string, signers types.Signers) (*types.Transaction, error) {
+	private, err := hexTxECDSA(hexPriv)
+	if err != nil {
+		return nil, err
+	}
+	sender, err := common.StringToAddress(from)
+	if err != nil {
+		return nil, err
+	}
+	recipient, err := common.StringToAddress(to)
+	if err != nil {
+		return nil, err
+	}
+	gasLimit := uint64(100000)
+	gasPrice := new(big.Int).SetUint64(1e9)
+	modifySigner := &transaction.ModifySigners{
+		Signers: signers,
+	}
+	data, err := json.Marshal(modifySigner)
+	if err != nil {
+		log.Errorf("json marshal error: %v", err)
+		return nil, err
+	}
+	rawTx := types.NewTransaction(sender, recipient, nil, gasLimit, gasPrice, data, params.ModifySignersTx, chainID, uint64(time.Now().Unix()+20*60), "", message)
 	signer := types.MakeSigner()
 	return signer.SignTx(rawTx, private)
 }

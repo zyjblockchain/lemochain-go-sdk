@@ -79,26 +79,21 @@ import (
 // }
 
 func main() {
-	// client := kmd.NewClient(utils.ChainUrl)
-	// b,err := client.IsCandidateAcc("Lemo83BJNQPPNFZ3AC7ZKC68BQJ5Y9SJDTFSNDKJ")
-	// log.Println("err: ", err)
-	// log.Println("b: ", b)
-
-	// fmt.Printf("%T, %s", val,val)
-
-	accSet := set.NewAccSet()
-	// // 1. 创建20个地址，每个地址分配1000lemo
-	// accSet.BatchPush(20,"11")
-	// log.Println("初始化地址数量：", accSet.Size())
-
-	// // 2. 发送箱子交易
-	// randBoxTx(accSet)
-
-	randRegisterCandidateTx(5, accSet)
-
+	// 1. 发送箱子交易
+	randBoxTx(5)
+	// 2. 发送注册候选节点交易
+	randRegisterCandidateTx(5)
+	// 3. 发送
 }
 
-func randBoxTx(accSet *set.AccSet) {
+// 随机创建资产交易
+
+// 随机发送箱子交易
+func randBoxTx(accountNum int) {
+	accSet := set.NewAccSet()
+	// 1. 创建地址，每个地址分配lemo
+	accSet.BatchPush(accountNum, "1")
+	log.Println("初始化地址数量：", accSet.Size())
 	client := kmd.NewClient(utils.ChainUrl)
 	fromSet := make([]*set.Acc, 0)
 	for i := 0; i < accSet.Size()/2; i++ {
@@ -120,39 +115,14 @@ func randBoxTx(accSet *set.AccSet) {
 	}
 	log.Println(len(subTxs))
 	result, err := client.SendBoxTx(utils.GodPrivate, utils.GodAddr, subTxs)
-	log.Println("error: ", err)
-	log.Println("result: ", result)
-	newAcc := make([]*set.Acc, 0)
-	newAcc = append(fromSet, toSet...)
-	time.Sleep(time.Second * 3)
-	for _, accKey := range newAcc {
-		temp := 0
-		for {
-			balance, err := client.GetBalance(accKey.Address.String())
-			if err != nil {
-				log.Println("getBalance error: %v", err)
-				break
-			}
-			if balance != "0" && len(balance) > 18 {
-				// 存入
-				bb, _ := new(big.Int).SetString(balance, 10)
-				accSet.Push(accKey.Address, accKey.Private, bb)
-				break
-			} else {
-				if temp == 3 {
-					break
-				}
-				temp++
-			}
-			time.Sleep(time.Second * 3)
-		}
+	if err != nil {
+		log.Println("error: ", err)
 	}
-	// 重新存入accout
-	log.Println("重新存入accout数量: ", accSet.Size())
+	log.Println("result: ", result)
 }
 
-// 首选转账到注册者，然后注册成功之后又注销，注销之后把钱转回到16亿账户
-func randRegisterCandidateTx(num int, accSet *set.AccSet) {
+// 首先转账到注册者，然后注册成功之后又注销，注销之后把钱转回到16亿账户
+func randRegisterCandidateTx(num int) {
 	client := kmd.NewClient(utils.ChainUrl)
 	accKeys := make([]*crypto.AccountKey, 0)
 	for i := 0; i < num; i++ {
